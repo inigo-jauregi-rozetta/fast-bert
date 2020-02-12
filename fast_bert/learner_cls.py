@@ -349,6 +349,10 @@ class BertLearner(Learner):
         self.model.zero_grad()
         pbar = master_bar(range(epochs))
 
+        # My custom variables
+        best_accuracy = 0
+        finish_the_training = False
+
         for epoch in pbar:
             epoch_step = 0
             epoch_loss = 0.0
@@ -412,6 +416,24 @@ class BertLearner(Learner):
                                     )
                                 )
 
+                                if key == 'eval_accuracy':
+                                    current_acc = value
+
+                                    if current_acc > best_accuracy:
+                                        self.logger.info("NEW BEST MODEL!!!")
+                                        self.logger.info("Best accuracy: {}".format(current_acc))
+                                        best_accuracy = current_acc
+                                        self.save_model()
+                                        self.logger.info("New model saved!!!")
+                                    else:
+                                        self.logger.info("Terminating the training process...")
+                                        finish_the_training = True
+                                        break
+
+                        #Check if training is terminated
+                        if finish_the_training:
+                            break
+
                         # Log metrics
                         self.logger.info(
                             "lr after step {}: {}".format(
@@ -433,14 +455,6 @@ class BertLearner(Learner):
 
                         logging_loss = tr_loss
 
-            # Evaluate the model after every epoch
-            if validate:
-                results = self.validate()
-                for key, value in results.items():
-                    self.logger.info(
-                        "eval_{} after epoch {}: {}: ".format(key, (epoch + 1), value)
-                    )
-
             # Log metrics
             self.logger.info(
                 "lr after epoch {}: {}".format((epoch + 1), scheduler.get_lr()[0])
@@ -451,6 +465,19 @@ class BertLearner(Learner):
                 )
             )
             self.logger.info("\n")
+
+            #Check if the training is finished
+            if finish_the_training:
+                break
+
+            # Evaluate the model after every epoch
+            if validate:
+                results = self.validate()
+                for key, value in results.items():
+                    self.logger.info(
+                        "eval_{} after epoch {}: {}: ".format(key, (epoch + 1), value)
+                    )
+
 
         tb_writer.close()
         return global_step, tr_loss / global_step
