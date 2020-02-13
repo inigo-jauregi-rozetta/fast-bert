@@ -416,7 +416,7 @@ class BertLearner(Learner):
                                     )
                                 )
 
-                                if key == 'eval_accuracy':
+                                if key == 'accuracy':
                                     current_acc = value
 
                                     if current_acc > best_accuracy:
